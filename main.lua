@@ -1,4 +1,3 @@
----@diagnostic disable: undefined-global
 -----------------------------------------------------------------------------------------
 --
 -- main.lua
@@ -8,6 +7,8 @@
 -------------------------------
 ------------ MENU  ------------
 ------------       ------------
+local render = require("render")
+
 local WIDTH = display.actualContentWidth;
 local HEIGHT = display.actualContentHeight;
 
@@ -19,73 +20,35 @@ local closeMenu = false;
 local backgroundColor;
 local background;
 
-backgroundColor = display.setDefault("background", 209/255, 205/255, 191/255)
+backgroundColor = display.setDefault("background", 230/255, 170/255, 100/255)
 background = display.newImageRect("Margherita.png", 300, 300)
 background.x = display.contentCenterX
 background.y = display.contentCenterY
 
-local function renderMenu()
-    local textDistancing = 10
+local CurrentStringFret = {}
+CurrentStringFret["0"] = nil
+CurrentStringFret["1"] = nil
+CurrentStringFret["2"] = nil
+CurrentStringFret["3"] = nil
+CurrentStringFret["4"] = nil
+CurrentStringFret["5"] = nil
 
-    local menuBox = display.newRect(display.contentCenterX, menuHeight / 2, WIDTH, menuHeight)
-    
-    local myText_1 = display.newText("Strumming", 0, menuBox.height / 2 , native.systemFont, 16 )
-    myText_1.x = menuBox.x - menuBox.width / 2 + myText_1.width/2   +textDistancing
-    
-    local myText_2 = display.newText("Arpeggio", 0, menuBox.height / 2 , native.systemFont, 16 )
-    myText_2.x =  myText_1.x + myText_1.width / 2 + myText_2.width / 2 + textDistancing
-    
-    local myText_3 = display.newText("Save", 0, menuBox.height / 2 , native.systemFont, 16 )
-    myText_3.x = myText_2.x + myText_2.width / 2 + myText_3.width / 2 + textDistancing
-	
-    local myText_4 = display.newText("Clear", 0, menuBox.height / 2 , native.systemFont, 16 )
-    myText_4.x = myText_3.x + myText_3.width / 2 + myText_4.width / 2 + textDistancing
 
-    menuBox:setFillColor( 0, 0, 0 ) -- Set the fill color to red
-    myText_1:setFillColor( 1, 1, 1 )
-    myText_2:setFillColor( 1, 1, 1 )
-    myText_3:setFillColor( 1, 1, 1 )
-	myText_4:setFillColor( 1, 1, 1 )
-	
-	return myText_1, myText_2, myText_3, myText_4
+local function getCoordinates(event, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)
+    if event.phase == "ended" then
+        --print("You clicked at X:", event.x, "Y:", event.y)
+        local X = math.ceil( event.x / (rectWidth+ rectDistX))      -- Da -0 a 12
+        local Y = math.floor(    (event.y - CORNER_Y) / (rectHeight/6) ) -- Da 0 a 5
+
+        if (X < 13) and (-1 < Y) and (Y < 6) then
+
+            print("(Inside function) Coord X e Y: ", X, Y) 
+            return X, Y
+        end
+    end
 end
 
-local function renderRects()
-    --Distanza su asse x fra rettangoli
-	local rectDist = 10
-	
-	-- Caratteristiche rettangoli (x,y,width,height, raggio degli angoli)
-	local x_rect = nil
-	local y_rect = display.contentCenterY+menuHeight/2
-    local rectWidth = (WIDTH/14) -rectDist
-	local rectHeight = 150
-	local cornerRadius = 10  -- Adjust the corner radius as needed
-	
-	
-	-- Guida (settata in trasparente)
-    local guide1 = display.newRect(display.contentCenterX, y_rect, (WIDTH/14)*12, rectHeight)
-    guide1:setFillColor( 0, 0, 1 ) -- Set the fill color to red
-	
-	--Loop per la creazione dei rettangoli
-	for x_rect=0, 12*(rectWidth+rectDist), rectWidth+rectDist
-	do 
-		local rect = display.newRoundedRect((guide1.x - guide1.width/2)+x_rect, y_rect, rectWidth, rectHeight, cornerRadius)
-		rect:setFillColor( 0, 0, 0)
-	end
-	
-	return rectHeight
-end
 
-local function renderStrings(rectHeight)
-	
-	local stringWeight = 6
-	local stringDist = (rectHeight - stringWeight)/ 7
-	
-	
-	local line = display.newLine(50, 200, 250, 200)
-	line:setStrokeColor( 0.8, 0.8, 0.8)  -- Set the stroke color to red
-	line.strokeWidth = stringWeight  -- Set the stroke width
-end
 
 local function textTouch(event)
     local target = event.target
@@ -103,33 +66,36 @@ local function gameLoop(event)
     if event.phase == "began" then
         print("Button Clicked! Loop started!")
         background:removeSelf() -- Remove the image
-        myText_1, myText_2, myText_3, myText_4 = renderMenu()
+        local myText_1, myText_2, myText_3, myText_4 = render.Menu(display, menuHeight, WIDTH, native)
 		
 		myText_1:addEventListener("touch", textTouch)
 		myText_2:addEventListener("touch", textTouch)
 		myText_3:addEventListener("touch", textTouch)
 		myText_4:addEventListener("touch", textTouch)
 		
-        rectHeight = renderRects()
-		renderStrings(rectHeight)
+        local CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight = render.Rects(display, WIDTH, menuHeight)
+		local rectDistY = render.Strings(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight)
 		
+        
+        display.getCurrentStage():addEventListener("touch", function(event)
+            local X, Y = getCoordinates(event, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)
+            
+            if ((X ~= nil) and (Y ~= nil)) then
+                --print("You clicked", X, Y)
+                CurrentStringFret[tostring(Y)] = X  -- Cambia il valore del tasto cliccato sulla data corda
+                print("CurrentStringFret", CurrentStringFret["0"],CurrentStringFret["1"],CurrentStringFret["2"], CurrentStringFret["3"],CurrentStringFret["4"],CurrentStringFret["5"])
+                
+                for index, value in pairs(CurrentStringFret) do
+                    print("Indice:", tonumber(index), "Valore:", value)
+                    
+
+                end
+                render.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight) 
+            end
+        end)
     end
 end
 
 -- Add a click event listener to the button
 background:addEventListener("touch", gameLoop)
---myText_1:addEventListener("touch", textTouch)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
