@@ -49,6 +49,11 @@ function R.Rects(display, WIDTH, menuHeight)
 		rect:setFillColor( 0, 0, 0)
 	end
 
+    -- Rettangolo della corda vuota (Non dovrebbe vedersi e il colore è settato UGUALE a quello dello sfondo)
+    local rect_empty = display.newRoundedRect((guide1.x - guide1.width/2) - rectWidth - rectDistX, y_rect, rectWidth, rectHeight, cornerRadius)
+    rect_empty:setFillColor( 230/255, 170/255, 100/255, 1)
+
+
     local CORNER_X = guide1.x - guide1.width/2 - rectWidth/2
     local CORNER_Y = y_rect - rectHeight/2 
 
@@ -85,6 +90,18 @@ function R.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectW
     local cerchio = display.newCircle(centerX, centerY, radius)
 
     cerchio:setFillColor(1, 0, 0) -- Rosso
+    
+end 
+
+function R.AnalysisBox(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight, menuHeight) 
+    print("AnalysisBox")
+
+    local rectBox = display.newRoundedRect(CORNER_X + 12*(rectWidth+rectDistX), 0, rectWidth*2, 50, 10)
+    rectBox.y = menuHeight+  (CORNER_Y - menuHeight)/2
+
+
+    --local rect = display.newRoundedRect(CORNER_X+(rectWidth+rectDistX) , CORNER_Y, rectWidth, rectHeight, cornerRadius)
+    rectBox:setFillColor(0, 0, 0) -- Rosso  
     
 end 
 
