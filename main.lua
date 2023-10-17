@@ -8,6 +8,9 @@
 ------------ MENU  ------------
 ------------       ------------
 local render = require("render")
+local option = require("option")
+local analysis = require("analysis")
+
 
 local WIDTH = display.actualContentWidth;
 local HEIGHT = display.actualContentHeight;
@@ -35,14 +38,14 @@ CurrentStringFret["5"] = nil
 
 
 local function getCoordinates(event, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)
+    -- Input: Click dell'utente
+    -- Output: Coordinate X, Y del punto fret-string
+
     if event.phase == "ended" then
-        --print("You clicked at X:", event.x, "Y:", event.y)
         local X = math.ceil( event.x / (rectWidth+ rectDistX))      -- Da -0 a 12
         local Y = math.floor(    (event.y - CORNER_Y) / (rectHeight/6) ) -- Da 0 a 5
 
         if (X < 13) and (-1 < Y) and (Y < 6) then
-
-            print("(Inside function) Coord X e Y: ", X, Y) 
             return X, Y
         end
     end
@@ -54,9 +57,7 @@ local function textTouch(event)
     local target = event.target
 
     if event.phase == "ended" then
-        -- Print the content of the text
         print("Clicked on:", target.text)
-        -- You can add additional handling code here if needed
     end
     return true  -- To stop the event from propagating to other objects
 end
@@ -64,7 +65,7 @@ end
 
 local function gameLoop(event)
     if event.phase == "began" then
-        print("Button Clicked! Loop started!")
+        print("Loop started!")
         background:removeSelf() -- Remove the image
         local myText_1, myText_2, myText_3, myText_4 = render.Menu(display, menuHeight, WIDTH, native)
 		
@@ -73,27 +74,48 @@ local function gameLoop(event)
 		myText_3:addEventListener("touch", textTouch)
 		myText_4:addEventListener("touch", textTouch)
 		
+
         local CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight = render.Rects(display, WIDTH, menuHeight)
 		local rectDistY = render.Strings(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight)
-		
         
         display.getCurrentStage():addEventListener("touch", function(event)
             local X, Y = getCoordinates(event, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)
             
-            if ((X ~= nil) and (Y ~= nil)) then
-                --print("You clicked", X, Y)
-                CurrentStringFret[tostring(Y)] = X  -- Cambia il valore del tasto cliccato sulla data corda
-                print("CurrentStringFret", CurrentStringFret["0"],CurrentStringFret["1"],CurrentStringFret["2"], CurrentStringFret["3"],CurrentStringFret["4"],CurrentStringFret["5"])
-                
-                for index, value in pairs(CurrentStringFret) do
-                    print("Indice:", tonumber(index), "Valore:", value)
-                    
+            --print("You clicked", X, Y)
+            -- Cambia il valore del tasto cliccato sulla data corda
 
-                end
-                render.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight) 
+            
+            local currentX = CurrentStringFret[tostring(Y)]
+            if (currentX == X) then
+                CurrentStringFret[tostring(Y)] = nil
+            else
+                CurrentStringFret[tostring(Y)] = X
             end
+
+
+            print("CurrentStringFret", CurrentStringFret["0"],CurrentStringFret["1"],CurrentStringFret["2"], CurrentStringFret["3"],CurrentStringFret["4"],CurrentStringFret["5"])
+            
+
+            -- Ridisegno rects e strings per coprire i disegni precedenti
+            render.Rects(display, WIDTH, menuHeight)
+            render.Strings(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight)
+            render.AnalysisBox(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight, menuHeight)
+
+            -- Ridisegna i 6 cerchi
+            for index, value in pairs(CurrentStringFret) do
+                print("Indice:", tonumber(index), "Valore:", value)
+                local Y = tonumber(index)
+                local X = value
+                render.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)  
+            end
+
+            local CurrentNotes = analysis.NotesRetriever(CurrentStringFret)
+            print("CurrentNotes in main",CurrentNotes["E"],CurrentNotes["A"],CurrentNotes["D"],CurrentNotes["G"],CurrentNotes["B"],CurrentNotes["e"])
+
+
         end)
     end
+    
 end
 
 -- Add a click event listener to the button
