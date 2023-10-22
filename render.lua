@@ -82,7 +82,7 @@ function R.Strings(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight
 
 end
 
-function R.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight) 
+function R.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight, nota) 
     local centerX = CORNER_X - rectWidth/2    + (X)*rectWidth + (X-1)*rectDistX
     local centerY = CORNER_Y + rectDistY      + (Y)*rectDistY
     local radius = 10 -- Sostituisci con il raggio desiderato
@@ -90,21 +90,51 @@ function R.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectW
     local cerchio = display.newCircle(centerX, centerY, radius)
 
     cerchio:setFillColor(1, 0, 0) -- Rosso
+
+    -- Create a text object for the letter "A"
+    local notaText = display.newText(tostring(nota), cerchio.x, cerchio.y, native.systemFont, 14)
+    notaText:setFillColor(1,1,1) -- White
+
     
 end 
 
-function R.AnalysisBox(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight, menuHeight) 
-    print("AnalysisBox")
+function R.AnalysisBox(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight, menuHeight, myChord) 
 
     local rectBox = display.newRoundedRect(CORNER_X + 12*(rectWidth+rectDistX), 0, rectWidth*2, 50, 10)
     rectBox.y = menuHeight+  (CORNER_Y - menuHeight)/2
 
-
     --local rect = display.newRoundedRect(CORNER_X+(rectWidth+rectDistX) , CORNER_Y, rectWidth, rectHeight, cornerRadius)
     rectBox:setFillColor(0, 0, 0) -- Rosso  
-    
-end 
 
+    local font_size = 16
+
+    if (myChord==nil) then
+        myChord = "No chord\ndetected" 
+        font_size = 12
+    end
+    local chordText = display.newText(tostring(myChord), rectBox.x, rectBox.y, native.systemFont, font_size)
+    chordText:setFillColor(1,1,1) -- White
+
+    
+
+
+    local hypotenuse = 30
+    local longness = 8
+    local verticesRight = { 0, hypotenuse, longness, hypotenuse/2,  0,0 }
+    local verticesLeft = { 0, hypotenuse, -longness, hypotenuse/2,  0,0 }
+
+    local triangleRight_X = rectBox.x + (rectBox.width/2 + longness/2   +1)
+    local triangleLeft_X = rectBox.x  - (rectBox.width/2 + longness/2   +1)
+    local triangle_Y = menuHeight + CORNER_Y
+
+    local triangleRight = display.newPolygon( triangleRight_X, triangle_Y * 0.5, verticesRight)
+    local triangleLeft = display.newPolygon( triangleLeft_X, triangle_Y * 0.5, verticesLeft)
+
+    triangleRight:setFillColor(1,0,0) -- White
+    triangleLeft:setFillColor(0.9,0,0) -- White
+
+    return triangleRight, triangleLeft
+end 
 
 
 
