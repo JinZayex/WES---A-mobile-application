@@ -23,10 +23,11 @@ local closeMenu = false;
 local backgroundColor;
 local background;
 
+
 backgroundColor = display.setDefault("background", 230/255, 170/255, 100/255)
-background = display.newImageRect("Margherita.png", 300, 300)
-background.x = display.contentCenterX
-background.y = display.contentCenterY
+backgroundMargherita = display.newImageRect("Margherita.png", 300, 300)
+backgroundMargherita.x = display.contentCenterX
+backgroundMargherita.y = display.contentCenterY
 
 local CurrentStringFret = {}
 CurrentStringFret["0"] = nil
@@ -36,13 +37,15 @@ CurrentStringFret["3"] = nil
 CurrentStringFret["4"] = nil
 CurrentStringFret["5"] = nil
 
+--indice dell'accordo trovato
+local c_showed = 1
 
 local function getCoordinates(event, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)
     -- Input: Click dell'utente
     -- Output: Coordinate X, Y del punto fret-string
 
     if event.phase == "ended" then
-        local X = math.ceil( event.x / (rectWidth+ rectDistX))      -- Da -0 a 12
+        local X = math.ceil( (event.x - CORNER_X) / (rectWidth+ rectDistX))      -- Da -0 a 12
         local Y = math.floor(    (event.y - CORNER_Y) / (rectHeight/6) ) -- Da 0 a 5
 
         if (X < 13) and (-1 < Y) and (Y < 6) then
@@ -66,7 +69,7 @@ end
 local function gameLoop(event)
     if event.phase == "began" then
         print("Loop started!")
-        background:removeSelf() -- Remove the image
+        backgroundMargherita:removeSelf() -- Remove the image
         local myText_1, myText_2, myText_3, myText_4 = render.Menu(display, menuHeight, WIDTH, native)
 		
 		myText_1:addEventListener("touch", textTouch)
@@ -78,46 +81,97 @@ local function gameLoop(event)
         local CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight = render.Rects(display, WIDTH, menuHeight)
 		local rectDistY = render.Strings(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight)
         
-        display.getCurrentStage():addEventListener("touch", function(event)
-            local X, Y = getCoordinates(event, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)
-            
-            --print("You clicked", X, Y)
-            -- Cambia il valore del tasto cliccato sulla data corda
+        local triangleRight, triangleLeft = render.AnalysisBox(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight, menuHeight, nil)
 
-            
-            local currentX = CurrentStringFret[tostring(Y)]
-            if (currentX == X) then
-                CurrentStringFret[tostring(Y)] = nil
-            else
-                CurrentStringFret[tostring(Y)] = X
+        local clickedOnTriangle = false
+        triangleRight:addEventListener("touch", function(event)
+            if event.phase == "ended" then
+                clickedOnTriangle = true
+                c_showed = c_showed+1
+                print("--> c_showed",c_showed)
             end
-
-
-            print("CurrentStringFret", CurrentStringFret["0"],CurrentStringFret["1"],CurrentStringFret["2"], CurrentStringFret["3"],CurrentStringFret["4"],CurrentStringFret["5"])
-            
-
-            -- Ridisegno rects e strings per coprire i disegni precedenti
-            render.Rects(display, WIDTH, menuHeight)
-            render.Strings(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight)
-            render.AnalysisBox(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight, menuHeight)
-
-            -- Ridisegna i 6 cerchi
-            for index, value in pairs(CurrentStringFret) do
-                print("Indice:", tonumber(index), "Valore:", value)
-                local Y = tonumber(index)
-                local X = value
-                render.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)  
-            end
-
-            local CurrentNotes = analysis.NotesRetriever(CurrentStringFret)
-            print("CurrentNotes in main",CurrentNotes["E"],CurrentNotes["A"],CurrentNotes["D"],CurrentNotes["G"],CurrentNotes["B"],CurrentNotes["e"])
-
-
         end)
+        triangleLeft:addEventListener("touch", function(event)
+            if event.phase == "ended" then
+                clickedOnTriangle = true
+                c_showed = c_showed-1
+                print("--> c_showed",c_showed)
+            end
+        end)
+
+        display.getCurrentStage():addEventListener("touch", function(event)
+            if event.phase == "ended" then
+                local X, Y = getCoordinates(event, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight)
+
+                if (clickedOnTriangle) then
+                    --Resetto 
+                else
+                    c_showed = 1
+                end
+                clickedOnTriangle = false
+
+
+                --Setta i valori di current string fret
+                local currentX = CurrentStringFret[tostring(Y)]
+                if (currentX == X) then
+                    CurrentStringFret[tostring(Y)] = nil
+                else
+                    CurrentStringFret[tostring(Y)] = X
+                end
+                --------------
+                -- CurrentNOTES     -- Dizionario:
+                --      Chiavi -->  E, A, D, G, B, e    (Corda)
+                --      Valore -->  Nota sulla corda corrispondente  (Scrittura alfabetica)
+                --------------
+                -- NumericNOTES     -- Lista:
+                --      Valori ---> Numerici (corrispondenti alle note correnti)
+                --                  I numeri hanno i seguenti valori--> A=1, A#=2, B=3  ... G#=12
+                local CurrentNOTES, NumericNOTES = analysis.CurrentNotes(CurrentStringFret)
+
+                --print("NumericNOTES -->", table.concat(NumericNOTES,", "))
+                local PossibleChords = analysis.ChordAnalyser(NumericNOTES)
+                for i=1, #PossibleChords, 1 do
+                    print("Chord founded",PossibleChords[i])
+                end
+
+                -- Ridisegno rects e strings per coprire i disegni precedenti
+                render.Rects(display, WIDTH, menuHeight)
+                render.Strings(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight)
+                -- Inserisci qui il numero di chord selezionato
+                render.AnalysisBox(display, CORNER_X, CORNER_Y, rectWidth, rectDistX, rectHeight, menuHeight, PossibleChords[c_showed])
+                
+                triangleRight:addEventListener("touch", function(event)
+                    if event.phase == "up" then 
+                        c_showed = c_showed+1; print("--> c_showed",c_showed) end
+                end)
+                triangleLeft:addEventListener("touch", function(event)
+                    if event.phase == "up" then 
+                        c_showed = c_showed+1; print("--> c_showed",c_showed) end
+                end)
+
+                -- Ridisegna i 6 cerchi 
+                local cordaName = {"e", "B", "G", "D", "A", "E" }
+                for index, value in pairs(CurrentStringFret) do
+                    --print("Hai appena cliccato su ------------->")
+                    --print("Corda:", tonumber(index), "Tasto:", value, "Nota corrente")
+
+                    local Y = tonumber(index)
+                    local X = value
+
+                    local corda = cordaName[tonumber(index)+1]
+                    local nota = CurrentNOTES[corda]
+                    --print("X e Y ",X, Y, "Corda e nota ", corda, nota)
+                    render.Circle(display, X, Y, CORNER_X, CORNER_Y, rectDistX, rectDistY, rectWidth, rectHeight, nota)  
+                end
+
+            end
+        end)
+
+
     end
     
 end
 
 -- Add a click event listener to the button
-background:addEventListener("touch", gameLoop)
+backgroundMargherita:addEventListener("touch", gameLoop)
 
